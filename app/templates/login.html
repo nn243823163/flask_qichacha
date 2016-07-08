@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+    <h1></h1>
+    <form method="post">
+        {% for message in get_flashed_messages() %}
+            {{ message }}
+        {% endfor %}
+
+        <h1>请输入需要查询的内容：</h1>
+        {{ form.username.label }}
+        {{ form.username() }}
+        {{ form.submit() }}
+        <br>
+
+        <h1>输入的关键词：</h1>
+        {{ select_name }}<br>
+
+        <h1>查询状态：</h1>
+        {{ status }}<br>
+
+        <div>
+             <h1>从数据库查询到的信息：</h1>
+            {% for info in info_from_db %}
+                <h3>公司名称：{{ info.org_name }}； 公司地址：{{ info.address }}</h3>
+            {% endfor %}
+        </div>
+
+        <div>
+             <h1>从爬虫查询到的信息：</h1>
+            {% for info in info_from_spider %}
+                <h3>公司名称：{{ info.org_name }}； 公司地址：{{ info.address }}</h3>
+            {% endfor %}
+        </div>
+
+    </form>
+</body>
+</html>
