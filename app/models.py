@@ -24,7 +24,7 @@ class EntAbnormity(Model):
     class Meta:
 
         database = db                                        #要连接的数据库
-        db_table = 'ent_abnormity'              #要映射的数据表,名称与原表一致
+        db_table = 'ent_abnormity1'              #要映射的数据表,名称与原表一致
         schema = 'data_warehouse2'
 
 class EntAlt(Model):
@@ -41,7 +41,7 @@ class EntAlt(Model):
     class Meta:
 
         database = db                                        #要连接的数据库
-        db_table = 'ent_alt'              #要映射的数据表,名称与原表一致
+        db_table = 'ent_alt1'              #要映射的数据表,名称与原表一致
         schema = 'data_warehouse2'
 
 class EntBranch(Model):
@@ -53,14 +53,15 @@ class EntBranch(Model):
     op_time = DateTimeField()
     branch_name = CharField()
     authority = CharField()
-    op_time = DateTimeField()
     order_code = IntegerField()
+    ent_area = CharField()
+    ent_uid = CharField()
 
 
     class Meta:
 
         database = db                                        #要连接的数据库
-        db_table = 'ent_branch'              #要映射的数据表,名称与原表一致
+        db_table = 'ent_branch1'              #要映射的数据表,名称与原表一致
         schema = 'data_warehouse2'
 
 
@@ -76,7 +77,7 @@ class EntPrincipal(Model):
     class Meta:
 
         database = db                                        #要连接的数据库
-        db_table = 'ent_principal'              #要映射的数据表,名称与原表一致
+        db_table = 'ent_principal1'              #要映射的数据表,名称与原表一致
         schema = 'data_warehouse2'
 
 
@@ -97,7 +98,7 @@ class EntShareholder(Model):
 
     class Meta:
         database = db  # 要连接的数据库
-        db_table = 'ent_shareholder'  # 要映射的数据表,名称与原表一致
+        db_table = 'ent_shareholder1'  # 要映射的数据表,名称与原表一致
         schema = 'data_warehouse2'
 
 
@@ -137,8 +138,9 @@ class OrgInfo(Model):
 
     class Meta:
         database = db  # 要连接的数据库
-        db_table = 'org_info'  # 要映射的数据表,名称与原表一致
+        db_table = 'org_info1'  # 要映射的数据表,名称与原表一致
         schema = 'data_warehouse2'
+
 
 class OrgInfo2(Model):
     org_id = UUIDField(primary_key=True)  # 如果是主键一定要加primary_key=True

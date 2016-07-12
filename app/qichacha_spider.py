@@ -332,10 +332,10 @@ def qichacha_spider_content(Uid,Area,Companyname):
     json_list = qichacha_deal_data(Uid,Area,Companyname,html_doc)
     return json_list,None
 ##############################################################################################
-new_cookies = {'gr_user_id':'fc558e4b-598b-4634-ad89-5e329040256b',
-'PHPSESSID':'ncdomt8517gf88aclgeb86jqc1',
-'gr_session_id_9c1eb7420511f8b2':'ca06f197-6323-4b51-9d4c-5569dc0356ff',
-'CNZZDATA1254842228':'1561282827-1467346842-null%7C1467940850'}
+new_cookies = {'CNZZDATA1254842228':'1599666056-1466385351-http%253A%252F%252Fwww.baidu.com%252F%7C1468286470',
+'gr_user_id':'364935ce-956e-4ccd-9b17-c21ad3b123f9',
+'PHPSESSID':'mk4kpf1uvm5bahf0tn40u24pn1',
+'gr_session_id_9c1eb7420511f8b2':'5a71a8c5-0880-41ec-8b4b-f16323ffd1b7'}
 #new_cookies = {}
 
 #new_cookies = {}
