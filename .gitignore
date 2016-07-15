@@ -1,4 +1,5 @@
 db.sqlite3
+.idea
 ./initial_data.*
 local_doc/
 local_settings.py

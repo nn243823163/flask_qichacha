@@ -6,7 +6,7 @@ db = PostgresqlDatabase(
     database='marketbox',
     user='data_server',
     password='data_server',
-    host='123.57.28.109',
+    host='10.172.238.195',
     port=5432
 )
 
