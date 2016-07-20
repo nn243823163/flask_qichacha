@@ -7,6 +7,14 @@ from config import *
 import json
 import hashlib
 import datetime
+import thread
+ss = requests.session()
+ss.keep_alive = False
+requests.adapters.DEFAULT_RETRIES = 5
+qichacha_content_lock = thread.allocate_lock()
+qichacha_login_lock = thread.allocate_lock()
+qichacha_update_cookies_status = False#防止更新cookies时  多次调用导致的多次更新问题
+qichacha_login_status = False#防止登录时  多次调用导致的多次登录问题
 def qichacha_spider_list(keyword):
     global new_cookies
     headers = {'Host': 'www.qichacha.com',
@@ -27,21 +35,25 @@ def qichacha_spider_list(keyword):
     if html_doc=='':
         status = u'返回网页为空'
     elif html_doc.find(u'查看更多信息') >= 0 or html_doc.find(u'后可以查看更多数据') >= 0   or html_doc.find(u'请登录后再查询') >= 0 :
+        thread.start_new_thread(qichacha_login, ())
         status = u'错误信息：未成功登录企查查或cookie过期'
-    elif html_doc.find(u'location.href = \'http://www.qichacha.com/index_verify?type=companysearch&back=/') >= 0:
+    elif html_doc.find(u'www.qichacha.com/index_verify?type=companysearch') >= 0:
+        #thread.start_new_thread(qichacha_update_cookies, (1,))
+        if len(new_cookies) == 0:
+            thread.start_new_thread(qichacha_login, ())
+        else:
+            thread.start_new_thread(qichacha_update_cookies, (1,))
+        time.sleep(1)
         status = u'错误信息：列表操作过于频繁'
     elif html_doc.find(u'小查还没找到数据') >= 0:
         status = u'错误信息：没有查询到数据'
     elif html_doc.find(u'您的搜索词太宽泛') >= 0:
         status = u'错误信息：您的搜索词太宽泛，建议更换一下搜索词'
-
-
     if status != None:#表示查询出错  返回None 跟错误信息
         return None,status
     args_list = list()
     args_dict = dict()
     args_dict_tmp = dict()
-
     spider_list = re_spider_list(html_doc)
     if len(spider_list) > 0:  # 表示匹配到了股东信息
         for i in range(0, len(spider_list)):
@@ -310,9 +322,7 @@ def qichacha_spider_content(Uid,Area,Companyname):
                'DNT': '1',
                'Accept-Encoding': 'gzip,deflate',
                'Accept-Language': 'zh-CN'}
-
     index_url = 'http://www.qichacha.com/firm_'+Area+'_'+Uid
-
     url_base = r'http://www.qichacha.com/company_getinfos?unique='+Uid+'&companyname='+Companyname+'&tab=base'
     r = requests.get(url_base, cookies=new_cookies,headers=headers)
     html_doc = r.text
@@ -323,7 +333,9 @@ def qichacha_spider_content(Uid,Area,Companyname):
         status = u'返回网页为空'
     elif re_qichacha_content_err_exp.search(html_doc)!=None:#正则匹配到  说明未成功登录
         status = u'错误信息：未成功登录企查查或cookie过期'
+        thread.start_new_thread(qichacha_login, ())
     elif html_doc.find(u'location.href=\'http://www.qichacha.com/index_verify?type=companyview') >= 0:
+        thread.start_new_thread(qichacha_update_cookies, (2,))
         status = u'错误信息：列表操作过于频繁'
     elif html_doc.find(u'小查还没找到数据') >= 0:
         status = u'错误信息：没有查询到数据'
@@ -331,15 +343,132 @@ def qichacha_spider_content(Uid,Area,Companyname):
         return None,status
     json_list = qichacha_deal_data(Uid,Area,Companyname,html_doc)
     return json_list,None
-##############################################################################################
-new_cookies = cookies = {'gr_user_id':'ce84e8f1-bdae-4b52-a4e1-45132697de19',
-'PHPSESSID':'okb6bi8lah5n9nhqrhrgtcjs52',
-'CNZZDATA1254842228':'1497672428-1467973250-null%7C1468556480',
-'gr_session_id_9c1eb7420511f8b2':'ef68dc27-d663-4e10-b8ef-b68d801b3902'}
-#new_cookies = {}
+def qichacha_login():
+    global new_cookies
+    global qichacha_login_status
+    qichacha_login_lock.acquire()#判断状态时候 先进性锁定防止同时读写导致的问题
+    if qichacha_login_status:
+        qichacha_login_lock.release()
+        print(u"测试并发调用 成功返回")
+        return False
+    qichacha_login_status = True
+    qichacha_login_lock.release()
+    headers = {'Host': 'www.qichacha.com',
+               'Connection': 'keep-alive',
+               'Content-Length': '202',
+               'Accept': 'application/json, text/javascript, */*; q=0.01',
+               'Origin': 'http://www.qichacha.com',
+               'X-Requested-With': 'XMLHttpRequest',
+               'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Maxthon/4.9.1.1000 Chrome/39.0.2146.0 Safari/537.36',
+               'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+               'DNT': '1',
+               'Referer': 'http://www.qichacha.com/user_login',
+               'Accept-Encoding': 'gzip,deflate',
+               'Accept-Language': 'zh-CN'}
+    url = 'http://www.qichacha.com/user_loginaction'
+    while True:
+        Validate, challenge,cookies = qichacha_geetest()
+        if Validate!=None:
+            break
+        time.sleep(5)
+    data1 = {'nameNormal': '15679544716',
+            'pwdNormal': 'zyw123456',
+            'geetest_challenge': challenge,
+            'geetest_validate': Validate,
+            'geetest_seccode': Validate + '%7Cjordan'}
+    r=requests.post(url,data=data1,headers=headers,cookies=cookies)
+    #print(r.cookies.get_dict())
+    new_cookies = cookies
 
+    qichacha_login_lock.acquire()
+    qichacha_login_status = False
+    qichacha_login_lock.release()
+    print(r.text)
+def qichacha_geetest(cookies=None):
+    if cookies==None:
+        r = requests.get('http://www.qichacha.com/index_getcap?rand=14')
+    else:
+        r = requests.get('http://www.qichacha.com/index_getcap?rand=14',cookies=cookies)
+    text = r.text
+    if cookies == None:
+        cookies = r.cookies.get_dict()
+    json_dict = json.loads(text)
+    challenge = json_dict.get('challenge')
+    print(challenge)
+    if challenge == '' or challenge == None :
+        return None, None, None
+    data = {'username': '1406990759@qq.com',
+            'gt': 'e2f5f0c5e6342d0cbda7c36df4997a19',
+            'challenge': challenge}
+    url = 'http://123.56.237.60:8808/type/3'
+    resp = requests.post(url, data=data)
+    if resp.status_code == 200:
+        print(resp.text)
+        print (resp.text.find(u'识别成功'))
+        if resp.text.find(u'识别成功')>0:
+            json_text = json.loads(resp.text)
+            Validate = json_text.get('Data').get('Validate')
+            challenge = json_text.get('Data').get('challenge')
+            return Validate,challenge,cookies
+    return None,None,None
+def qichacha_update_cookies(type_num):#传入1的话  表示解除列表页限制
+    global qichacha_update_cookies_status
+    qichacha_content_lock.acquire()#判断状态时候 先进性锁定防止同时读写导致的问题
+    if qichacha_update_cookies_status:
+        qichacha_content_lock.release()
+        print(u"测试并发调用 成功返回")
+        return False
+    # 锁定
+    qichacha_update_cookies_status = True
+    qichacha_content_lock.release()
+    global new_cookies
+    while True:
+        Validate, challenge, cookies = qichacha_geetest(new_cookies)
+        if Validate != None:
+            break
+    url = 'http://www.qichacha.com/index_verifyAction'
+    if type_num == 2:
+        data = {'geetest_challenge': challenge,
+            'geetest_validate':Validate,
+            'geetest_seccode':  Validate+'%7Cjordan',
+            'type': 'companysearch'}
+    else:
+        data = {'geetest_challenge': challenge,
+                'geetest_validate': Validate,
+                'geetest_seccode': Validate + '%7Cjordan',
+                'type': 'companyview'}
+
+
+    r = requests.post(url,data=data,cookies=cookies)
+    html_doc = r.text
+    # 修改状态
+    qichacha_content_lock.acquire()
+    qichacha_update_cookies_status = False
+    qichacha_content_lock.release()
+    print (html_doc)
+    if html_doc.find(u'\u9a8c\u8bc1\u6210\u529f'):#表示解除成功
+        return True
+    else:
+        return False
+
+##############################################################################################
+'''new_cookies = {'CNZZDATA1254842228':'1599666056-1466385351-http%253A%252F%252Fwww.baidu.com%252F%7C1468286470',
+'gr_user_id':'364935ce-956e-4ccd-9b17-c21ad3b123f9',
+'PHPSESSID':'mk4kpf1uvm5bahf0tn40u24pn1',
+'gr_session_id_9c1eb7420511f8b2':'5a71a8c5-0880-41ec-8b4b-f16323ffd1b7'}'''
+new_cookies = {}
+#qichacha_login()
 #new_cookies = {}
-json_list, status = qichacha_spider_list('众标')
-# json_list , status= qichacha_spider_content('177a6596027d4ecc21c47d06162c080c','ZJ',u'嘉善三信酒庄')
-print (json_list)
-print (status)
+# print(new_cookies)
+# json_list, status = qichacha_spider_list('法人')
+# #json_list , status= qichacha_spider_content('177a6596027d4ecc21c47d06162c080c','ZJ',u'嘉善三信酒庄')
+# time.sleep(10)
+# print '1'
+# json_list, status = qichacha_spider_list('法人')
+# print (json_list)
+# print (status)
+# time.sleep(5)
+# print '2'
+# json_list, status = qichacha_spider_list('法人')
+# print (json_list)
+# print (status)

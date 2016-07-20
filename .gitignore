@@ -16,3 +16,4 @@ external/
 *.swo
 *.swm
 *.pid
+nginx.conf
