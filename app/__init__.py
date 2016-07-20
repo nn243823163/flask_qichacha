@@ -9,7 +9,7 @@ from .views import init_views
 
 def creat_app():
     app =  Flask(__name__)
-    app.config.from_pyfile('\local_settings.py')
+    app.config.from_pyfile('local_settings.py')
     init_views(app)
     return app
 
